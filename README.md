@@ -1,3 +1,4 @@
+Link video báo cáo: https://drive.google.com/file/d/1J8UtAm0tIlJJ_cJ0OBKH-_R7e46nK9oV/view?usp=drive_link
 # Smart Restaurant System
 
 Hệ thống quản lý nhà hàng theo thời gian thực, hỗ trợ 4 nhóm người dùng:
