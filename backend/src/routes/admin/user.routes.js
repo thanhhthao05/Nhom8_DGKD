@@ -1,3 +1,4 @@
+
 import express from "express";
 import { userManagementController } from "../../controllers/admin/user.management.controller.js";
 import { auth } from "../../middlewares/auth.middleware.js";
@@ -32,6 +33,14 @@ router.post(
 // PUT /api/admin/users/:userId
 router.put(
   "/:userId",
+  auth,
+  allowRoles("admin"),
+  userManagementController.updateUser,
+);
+
+// PUT /api/admin/users/:userId/role (alias for role update)
+router.put(
+  "/:userId/role",
   auth,
   allowRoles("admin"),
   userManagementController.updateUser,

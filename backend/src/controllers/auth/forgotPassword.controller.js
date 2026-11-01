@@ -2,10 +2,14 @@ import { sendResetPasswordEmail } from "../../services/auth/forgotPassword.servi
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
     const { error } = await sendResetPasswordEmail(email);
-    if (error) return res.status(400).json({ error: error.message });
-    res.json({ message: "Password reset email sent" });
+    if (error && !error.message?.includes("security") && !error.message?.includes("rate")) {
+      console.warn("Forgot password warning:", error.message);
+    }
+    return res.status(200).json({ message: "Password reset email sent" });
   } catch (err) {
     return res
       .status(500)

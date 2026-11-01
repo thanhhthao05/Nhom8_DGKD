@@ -7,6 +7,9 @@ const router = express.Router();
 
 router.use(auth, allowRoles("admin"));
 
+// GET /api/admin/dashboard (Tổng quan)
+router.get("/", dashboardController.getStats);
+
 // GET /api/admin/dashboard/stats
 router.get("/stats", dashboardController.getStats);
 

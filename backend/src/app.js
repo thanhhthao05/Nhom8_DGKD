@@ -12,12 +12,33 @@ dotenv.config();
 
 const app = express();
 
-const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  process.env.FRONTEND_URL?.replace(/\/$/, ""),
+].filter(Boolean);
 
 // CORS - cho phép frontend gọi API
 app.use(
   cors({
-    origin: frontendUrl,
+    origin: (origin, callback) => {
+      // Cho phép requests không có origin (như curl, Postman, test, mobile app)
+      if (!origin) return callback(null, true);
+
+      // Cho phép tất cả các port localhost / 127.0.0.1 khi chạy local development
+      if (
+        allowedOrigins.includes(origin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
     credentials: true,
   }),
 );

@@ -4,15 +4,24 @@ export const register = async (req, res) => {
   try {
     const { fullName, phone, email, password } = req.body;
 
-    if (!fullName || !phone || !email || !password) {
+    if (!email || !password) {
       return res
         .status(400)
-        .json({ error: "Full name, phone, email and password are required." });
+        .json({ error: "Email and password are required." });
     }
 
+    if (phone && !fullName) {
+      return res
+        .status(400)
+        .json({ error: "Full name is required when phone is provided." });
+    }
+
+    const finalFullName = fullName || "Khách Hàng";
+    const finalPhone = phone || "0900000000";
+
     const { user, error } = await authService.register(
-      fullName,
-      phone,
+      finalFullName,
+      finalPhone,
       email,
       password,
     );

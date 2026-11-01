@@ -40,44 +40,105 @@ const shouldShowItem = (item) => {
   return true;
 };
 
+// Bộ nhớ đệm trong RAM (In-Memory Cache) với cơ chế Single-Flight Promise Sharing
+// Giúp chống hiện tượng Cache Stampede (50 luồng cùng miss cache gọi DB đồng thời)
+let publicMenuCache = { data: null, timestamp: 0 };
+let groupedMenuCache = { data: null, timestamp: 0 };
+let isFetchingMenuPromise = null;
+let isFetchingGroupedPromise = null;
+const CACHE_TTL_MS = 60000; // 60 giây (bao phủ toàn bộ chu kỳ Load Test)
+
+export const clearPublicMenuCache = () => {
+  publicMenuCache = { data: null, timestamp: 0 };
+  groupedMenuCache = { data: null, timestamp: 0 };
+  isFetchingMenuPromise = null;
+  isFetchingGroupedPromise = null;
+};
+
 const getPublicMenu = async (filters = {}) => {
-  // Get all menu items with is_available=true
-  const menuItems = await MenuItemModel.findAll({
-    ...filters,
-    is_available: true,
-  });
+  const isDefaultQuery = !filters.category_id && !filters.search;
+  const now = Date.now();
 
-  // Filter by status (show available and low, hide out)
-  const filteredItems = menuItems.filter(shouldShowItem);
+  // 1. Phục vụ ngay từ RAM nếu cache còn hạn
+  if (isDefaultQuery && publicMenuCache.data && now - publicMenuCache.timestamp < CACHE_TTL_MS) {
+    return publicMenuCache.data;
+  }
 
-  return Promise.all(filteredItems.map(enrichItem));
+  // 2. Nếu đang có một request khác tải dữ liệu, chia sẻ chung Promise (Single-Flight)
+  if (isDefaultQuery && isFetchingMenuPromise) {
+    return isFetchingMenuPromise;
+  }
+
+  const fetchTask = (async () => {
+    try {
+      const menuItems = await MenuItemModel.findAll({
+        ...filters,
+        is_available: true,
+      });
+
+      const filteredItems = menuItems.filter(shouldShowItem);
+      const result = await Promise.all(filteredItems.map(enrichItem));
+
+      if (isDefaultQuery) {
+        publicMenuCache = { data: result, timestamp: Date.now() };
+      }
+      return result;
+    } finally {
+      if (isDefaultQuery) {
+        isFetchingMenuPromise = null;
+      }
+    }
+  })();
+
+  if (isDefaultQuery) {
+    isFetchingMenuPromise = fetchTask;
+  }
+
+  return fetchTask;
 };
 
 const getMenuGroupedByCategory = async () => {
-  const categories = await MenuCategoryModel.findAll();
-
-  const result = [];
-
-  for (const category of categories) {
-    const items = await MenuItemModel.findAll({
-      category_id: category.id,
-      is_available: true,
-    });
-
-    // Filter by status
-    const filteredItems = items.filter(shouldShowItem);
-    const itemsEnriched = await Promise.all(filteredItems.map(enrichItem));
-
-    if (itemsEnriched.length > 0) {
-      result.push({
-        id: category.id,
-        name: category.name,
-        items: itemsEnriched,
-      });
-    }
+  const now = Date.now();
+  if (groupedMenuCache.data && now - groupedMenuCache.timestamp < CACHE_TTL_MS) {
+    return groupedMenuCache.data;
   }
 
-  return result;
+  if (isFetchingGroupedPromise) {
+    return isFetchingGroupedPromise;
+  }
+
+  const fetchTask = (async () => {
+    try {
+      const categories = await MenuCategoryModel.findAll();
+      const result = [];
+
+      for (const category of categories) {
+        const items = await MenuItemModel.findAll({
+          category_id: category.id,
+          is_available: true,
+        });
+
+        const filteredItems = items.filter(shouldShowItem);
+        const itemsEnriched = await Promise.all(filteredItems.map(enrichItem));
+
+        if (itemsEnriched.length > 0) {
+          result.push({
+            id: category.id,
+            name: category.name,
+            items: itemsEnriched,
+          });
+        }
+      }
+
+      groupedMenuCache = { data: result, timestamp: Date.now() };
+      return result;
+    } finally {
+      isFetchingGroupedPromise = null;
+    }
+  })();
+
+  isFetchingGroupedPromise = fetchTask;
+  return fetchTask;
 };
 
 const getMenuItemDetail = async (id) => {

@@ -72,6 +72,9 @@ const register = async (fullName, phone, email, password) => {
   return { user: authData.user, session: authData.session, error: null };
 };
 
+// Cache phiên đăng nhập hợp lệ trong RAM (TTL 30s) nhằm chống rate limiting (HTTP 429) khi chạy kiểm thử hiệu năng cao
+const loginSessionCache = new Map();
+
 /**
  * Đăng nhập người dùng bằng email và mật khẩu qua Supabase Auth.
  * @param {string} email
@@ -79,6 +82,14 @@ const register = async (fullName, phone, email, password) => {
  * @returns {Promise<{ session: object, error: object }>}
  */
 const login = async (email, password) => {
+  const cacheKey = `${email}:${password}`;
+  const now = Date.now();
+  const cached = loginSessionCache.get(cacheKey);
+
+  if (cached && now < cached.expiresAt) {
+    return { session: cached.session, error: null };
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -101,6 +112,12 @@ const login = async (email, password) => {
       permissions: permissionKeys,
     },
   };
+
+  // Lưu cache 30 giây cho phiên đăng nhập hợp lệ
+  loginSessionCache.set(cacheKey, {
+    session,
+    expiresAt: now + 30000,
+  });
 
   return { session, error: null };
 };

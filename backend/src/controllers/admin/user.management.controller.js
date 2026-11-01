@@ -11,6 +11,9 @@ const getAllUsers = async (req, res, next) => {
       pageSize,
       type,
     });
+    if (!req.query.page && !req.query.pageSize) {
+      return res.status(200).json(result.users);
+    }
     res.status(200).json(result);
   } catch (error) {
     next(error);

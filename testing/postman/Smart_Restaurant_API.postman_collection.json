@@ -1,0 +1,1916 @@
+{
+	"info": {
+		"_postman_id": "smart-restaurant-api-collection",
+		"name": "Smart Restaurant — API Testing",
+		"description": "Bộ kiểm thử API đầy đủ cho Hệ thống Quản lý Nhà hàng Thông minh.\n\nMôn học: Đánh giá & Kiểm thử Chất lượng Phần mềm\n\n## Hướng dẫn sử dụng\n1. Import collection này vào Postman\n2. Import file Environment kèm theo\n3. Chạy request \"Login (Admin)\" trước để lấy token\n4. Các request khác sẽ tự động dùng token từ biến môi trường\n\n## Tài khoản hệ thống\n- **Admin:** admin@gmail.com / 123456789\n- **Chef (Bếp):** chef22@gmail.com / 123456789\n- **Staff (Nhân viên):** ductanlang2005@gmail.com / 123456789\n\n## Cấu trúc\n- 🔐 Auth: Đăng ký, Đăng nhập, Refresh Token, Quên/Đặt lại mật khẩu\n- 👑 Admin: CRUD Users, Menu, Tables, Orders, Dashboard\n- 👷 Staff: Sơ đồ bàn, Đặt món, Quản lý bếp, Yêu cầu hỗ trợ\n- 🍳 Chef: Kitchen Board, Kitchen Stats, Chuyển trạng thái món\n- 💰 Cashier: Duyệt đơn, Thanh toán, Đặt bàn\n- 🌐 Public: Menu công khai, Đặt món QR, Đánh giá",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3001"
+		},
+		{
+			"key": "admin_token",
+			"value": ""
+		},
+		{
+			"key": "staff_token",
+			"value": ""
+		},
+		{
+			"key": "chef_token",
+			"value": ""
+		},
+		{
+			"key": "user_token",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"description": "Nhóm API xác thực người dùng: Đăng ký, Đăng nhập (3 vai trò), Refresh Token, Quên mật khẩu, Đặt lại mật khẩu.\nSử dụng tài khoản thực của hệ thống.",
+			"item": [
+				{
+					"name": "Register — Đăng ký tài khoản mới",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"guest_{{$timestamp}}@gmail.com\",\n  \"password\": \"123456789\",\n  \"fullName\": \"Khách Hàng Mới\",\n  \"phone\": \"0987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Đăng ký tài khoản mới. Mặc định role = guest.\n\n**Kỹ thuật:** Equivalence Partitioning\n- Valid: email đúng định dạng + password hợp lệ\n- Invalid: thiếu email, thiếu password, email trùng"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201 Created', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response contains user object', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});",
+									"",
+									"pm.test('Response time < 3000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Register — Thiếu email (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "EP — Invalid Partition: Thiếu trường email"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Error message is returned', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Register — Thiếu password (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "EP — Invalid Partition: Thiếu trường password"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Register — Email đã tồn tại (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "EP — Invalid Partition: Đăng ký với email đã tồn tại trong hệ thống"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Error message about duplicate email', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login — Admin (admin@gmail.com)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Đăng nhập với tài khoản Admin thực tế.\nToken sẽ tự động được lưu vào biến {{admin_token}} qua Post-response Script."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains access_token', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    pm.expect(jsonData.access_token).to.be.a('string');",
+									"    // Auto-save token to collection variable",
+									"    pm.collectionVariables.set('admin_token', jsonData.access_token);",
+									"});",
+									"",
+									"pm.test('Response contains user info with admin role', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"    pm.expect(jsonData.user).to.have.property('role');",
+									"});",
+									"",
+									"pm.test('Response time < 2000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login — Chef (chef22@gmail.com)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"chef22@gmail.com\",\n  \"password\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Đăng nhập với tài khoản Chef (Bếp) — Đặng Ngọc Đức.\nToken lưu vào {{chef_token}}."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains access_token', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    // Auto-save token",
+									"    pm.collectionVariables.set('chef_token', jsonData.access_token);",
+									"});",
+									"",
+									"pm.test('Response time < 2000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login — Staff (ductanlang2005@gmail.com)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"ductanlang2005@gmail.com\",\n  \"password\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Đăng nhập với tài khoản Nhân viên (Staff) — Đặng Ngọc Đức.\nToken lưu vào {{staff_token}}."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains access_token', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    // Auto-save token",
+									"    pm.collectionVariables.set('staff_token', jsonData.access_token);",
+									"});",
+									"",
+									"pm.test('Response time < 2000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login — Sai credentials (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"wrongpassword\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "EP — Invalid Partition: Email đúng nhưng password sai"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 or 401 Unauthorized', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+									"});",
+									"",
+									"pm.test('Error message returned', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login — Email không tồn tại (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"notexist@gmail.com\",\n  \"password\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "EP — Invalid Partition: Email không tồn tại trong hệ thống"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 or 401 Unauthorized', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+									"});",
+									"",
+									"pm.test('Error message returned', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login — Body rỗng (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "EP — Invalid Partition: Gửi body rỗng, thiếu cả email và password"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 or 401', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh-token",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "refresh-token"]
+						},
+						"description": "Làm mới access_token bằng refresh_token"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@gmail.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "forgot-password"]
+						},
+						"description": "Gửi email đặt lại mật khẩu cho tài khoản admin@gmail.com"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Success message returned', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Reset Password — Thiếu token (EP Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"NewPassword@123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "reset-password"]
+						},
+						"description": "EP — Invalid: Thiếu token khi đặt lại mật khẩu"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👑 Admin (admin@gmail.com)",
+			"description": "Nhóm API quản trị viên.\nSử dụng token Admin (admin@gmail.com) — tự động lấy từ biến {{admin_token}}.\nKiểm tra CRUD Users, Menu, Tables, Dashboard, Orders + phân quyền.",
+			"item": [
+				{
+					"name": "Users",
+					"item": [
+						{
+							"name": "Get All Users",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users"]
+								},
+								"description": "Admin lấy danh sách tất cả người dùng trong hệ thống"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response is an array', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.be.an('array');",
+											"});",
+											"",
+											"pm.test('Each user has id, email, role', function () {",
+											"    var jsonData = pm.response.json();",
+											"    if (jsonData.length > 0) {",
+											"        pm.expect(jsonData[0]).to.have.property('id');",
+											"        pm.expect(jsonData[0]).to.have.property('email');",
+											"    }",
+											"});",
+											"",
+											"pm.test('Response time < 2000ms', function () {",
+											"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get User By ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/users/{{user_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users", "{{user_id}}"]
+								},
+								"description": "Lấy thông tin chi tiết 1 user theo ID"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('User has required fields', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.have.property('id');",
+											"    pm.expect(jsonData).to.have.property('email');",
+											"    pm.expect(jsonData).to.have.property('role');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Update User Role",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" },
+									{ "key": "Content-Type", "value": "application/json" }
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"role\": \"staff\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/admin/users/{{user_id}}/role",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users", "{{user_id}}", "role"]
+								},
+								"description": "Admin cập nhật role cho user. Các role hợp lệ: guest, staff, cashier, chef, admin"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Role updated correctly', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.role).to.eql('staff');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Delete User",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/users/{{user_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users", "{{user_id}}"]
+								},
+								"description": "Admin xóa 1 user. Cẩn thận: không xóa tài khoản admin chính!"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Delete message returned', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.have.property('message');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Users — Không có token (Expect 401)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/admin/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users"]
+								},
+								"description": "Kiểm tra phân quyền: Truy cập Admin API mà KHÔNG gửi token → phải trả 401"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 401 Unauthorized', function () {",
+											"    pm.response.to.have.status(401);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Users — Token Staff (Expect 403)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users"]
+								},
+								"description": "Kiểm tra phân quyền RBAC: Staff (ductanlang2005@gmail.com) truy cập Admin API → phải trả 403 Forbidden"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 403 Forbidden', function () {",
+											"    pm.response.to.have.status(403);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Users — Token Chef (Expect 403)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{chef_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "users"]
+								},
+								"description": "Kiểm tra phân quyền RBAC: Chef (chef22@gmail.com) truy cập Admin API → phải trả 403 Forbidden"
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 403 Forbidden', function () {",
+											"    pm.response.to.have.status(403);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Menu & Tables",
+					"item": [
+						{
+							"name": "Get Menu Categories",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/menu-categories",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "menu-categories"]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"pm.test('Response is array', function () {",
+											"    pm.expect(pm.response.json()).to.be.an('array');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Menu Items",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/menu-items",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "menu-items"]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Tables",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/tables",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "tables"]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Dashboard & Reports",
+					"item": [
+						{
+							"name": "Get Dashboard",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/dashboard",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "dashboard"]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"pm.test('Response time < 3000ms', function () {",
+											"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Orders (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/orders",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "orders"]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						},
+						{
+							"name": "Get Reviews (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/reviews",
+									"host": ["{{base_url}}"],
+									"path": ["api", "admin", "reviews"]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "👷 Staff (ductanlang2005@gmail.com)",
+			"description": "Nhóm API cho nhân viên phục vụ.\nSử dụng token Staff (ductanlang2005@gmail.com) — tự động lấy từ biến {{staff_token}}.",
+			"item": [
+				{
+					"name": "Get Tables (Staff View)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/tables",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "tables"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response is array of tables', function () {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Table Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/tables/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "tables", "{{table_id}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Menu (Staff)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/menu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "menu"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Pending Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/pending-orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "pending-orders"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Pending Items",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/pending-items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "pending-items"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Serving Items",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/serving-items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "serving-items"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Service Requests",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "requests"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Create Order (Staff đặt hộ khách)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": 2,\n      \"note\": \"Ít cay\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/staff/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "orders"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 201', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Approve Order",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/orders/{{order_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "orders", "{{order_id}}", "approve"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🍳 Chef (chef22@gmail.com)",
+			"description": "Nhóm API cho Bếp trưởng.\nSử dụng token Chef (chef22@gmail.com) — tự động lấy từ biến {{chef_token}}.\nBếp xem Kitchen Board, thống kê, chuyển trạng thái món.",
+			"item": [
+				{
+					"name": "Get Kitchen Board",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{chef_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/kitchen-board",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "kitchen-board"]
+						},
+						"description": "Bếp xem danh sách món cần nấu (Kitchen Board)"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Kitchen Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{chef_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/kitchen-stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "kitchen-stats"]
+						},
+						"description": "Thống kê tổng quan bếp trong ngày"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Kitchen History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{chef_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/staff/kitchen-history",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "kitchen-history"]
+						},
+						"description": "Lịch sử món đã nấu chi tiết có phân trang"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Toggle Menu Item Availability",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{chef_token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"is_available\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/staff/menu-items/{{menu_item_id}}/availability",
+							"host": ["{{base_url}}"],
+							"path": ["api", "staff", "menu-items", "{{menu_item_id}}", "availability"]
+						},
+						"description": "Bếp bật/tắt món ăn (hết nguyên liệu → tắt)"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💰 Cashier",
+			"description": "Nhóm API thu ngân: Duyệt đơn, Thanh toán, Quản lý đặt bàn, Yêu cầu hỗ trợ.\nSử dụng token Staff có quyền cashier.",
+			"item": [
+				{
+					"name": "Get Tables (Cashier)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cashier/tables",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cashier", "tables"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Table Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cashier/tables/{{table_id}}/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cashier", "tables", "{{table_id}}", "orders"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Checkout Table",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cashier/tables/{{table_id}}/checkout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cashier", "tables", "{{table_id}}", "checkout"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Reservations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cashier/reservations",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cashier", "reservations"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Service Requests (Cashier)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{staff_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cashier/service-requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cashier", "service-requests"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🌐 Public (Thực khách)",
+			"description": "Nhóm API công khai cho thực khách: Xem menu, Đặt món QR, Tra cứu bàn, Đặt bàn, Đánh giá.\nKhông cần xác thực (trừ Đặt bàn trước).",
+			"item": [
+				{
+					"name": "Get Public Menu",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/menu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "menu"]
+						},
+						"description": "Lấy danh sách thực đơn công khai — API phổ biến nhất, mọi thực khách quét QR đều gọi"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Menu data is returned', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.not.be.empty;",
+									"});",
+									"",
+									"pm.test('Response time < 2000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Menu Grouped by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/menu/grouped",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "menu", "grouped"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Menu Item Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/menu/{{menu_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "menu", "{{menu_item_id}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Item has name', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Menu Item — Not Found (Expect 404)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/menu/non-existent-id-12345",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "menu", "non-existent-id-12345"]
+						},
+						"description": "EP — Invalid: Truy vấn món ăn với ID không tồn tại"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Search Menu by Keyword",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/menu?search=phở",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "menu"],
+							"query": [
+								{ "key": "search", "value": "phở" }
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Create Order — QR Đặt món hợp lệ",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": 1,\n      \"note\": \"\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders"]
+						},
+						"description": "Thực khách đặt món qua QR — luồng chính"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 201', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"pm.test('Response time < 3000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Create Order — Items rỗng (BVA Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"items\": []\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders"]
+						},
+						"description": "BVA — Boundary: Items là mảng rỗng (length = 0)"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Create Order — Quantity = 0 (BVA Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": 0\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders"]
+						},
+						"description": "BVA — Boundary: Số lượng = 0 (giá trị biên dưới không hợp lệ)"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Create Order — Quantity âm = -1 (BVA Invalid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"quantity\": -1\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders"]
+						},
+						"description": "BVA — Boundary: Số lượng âm = -1"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Session Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/orders/session-status/{{session_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders", "session-status", "{{session_id}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Orders by Session",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/orders/session/{{session_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders", "session", "{{session_id}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Order Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "orders", "{{order_id}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Get Table by Token (QR Scan)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/tables/token/{{table_token}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "public", "tables", "token", "{{table_token}}"]
+						},
+						"description": "Thực khách quét mã QR → lấy thông tin bàn qua token"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		}
+	]
+}
